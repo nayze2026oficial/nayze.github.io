@@ -1,0 +1,2858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NAYZE - Experiencia Interactiva 8-Bit & Lanzamiento Oficial</title>
+  <meta name="description" content="Landing page interactiva 8-bit para el artista NAYZE. Explora el estudio de grabación, juega al minijuego arcade y desbloquea adelantos exclusivos en el iPod.">
+  
+  <!-- Retro & Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;600;800;900&family=VT323&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #ff0055;
+      --primary-glow: rgba(255, 0, 85, 0.6);
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.6);
+      --yellow: #ffe600;
+      --green-lcd: #8bac0f;
+      --green-lcd-dark: #0f380f;
+      --bg-dark: #07070a;
+      --panel-bg: rgba(14, 15, 23, 0.95);
+      --border-retro: 3px solid #ffffff;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-dark);
+      color: #ffffff;
+      overflow: hidden;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .retro-font {
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    /* --- CRT & SCANLINES OVERLAY --- */
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      z-index: 99;
+      opacity: 0.65;
+    }
+
+    /* --- AUDIO TOGGLE BUTTON (TOP RIGHT) --- */
+    .top-controls {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      z-index: 101;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .audio-btn, .help-btn {
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border: 2px solid var(--cyan);
+      padding: 8px 14px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 4px;
+      box-shadow: 0 0 10px var(--cyan-glow);
+      transition: all 0.2s;
+    }
+
+    .audio-btn:hover, .help-btn:hover {
+      background: var(--cyan);
+      color: #000;
+      transform: translateY(-2px);
+    }
+
+    /* --- LOBBY / STUDIO CONTAINER --- */
+    .lobby-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* 16:9 Aspect Ratio Studio Canvas */
+    .studio-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 177.78vh; /* 16:9 aspect */
+      max-height: 56.25vw;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+    }
+
+    #studio-bg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    /* Monitor Overlay Layer (1:1 Exactly Superimposed over fondo_estudio) */
+    .monitor-layer-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+      z-index: 20;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 0 10px var(--cyan-glow));
+      animation: monitor-pulse 2.8s infinite alternate;
+      transition: filter 0.25s ease;
+    }
+
+    @keyframes monitor-pulse {
+      0% { filter: drop-shadow(0 0 6px var(--cyan-glow)) brightness(0.97); }
+      100% { filter: drop-shadow(0 0 20px var(--cyan)) brightness(1.15); }
+    }
+
+    /* Hotspot: Clickable area positioned precisely over the screen */
+    .hotspot-monitor-hotspot {
+      position: absolute;
+      top: 23.5%;
+      left: 42.5%;
+      width: 19%;
+      height: 21%;
+      cursor: pointer;
+      z-index: 22;
+      border: 2px dashed rgba(0, 240, 255, 0.45);
+      background: rgba(0, 240, 255, 0.05);
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .hotspot-monitor-hotspot:hover {
+      background: rgba(0, 240, 255, 0.25);
+      border-color: var(--cyan);
+      box-shadow: 0 0 22px var(--cyan);
+    }
+
+    /* Hotspot: Avatar NAYZE (Más grande, con presencia e integrado físicamente en el estudio) */
+    .hotspot-nayze-container {
+      position: absolute;
+      bottom: 3.5%;
+      left: 9%;
+      width: 24%;
+      height: 72%;
+      cursor: pointer;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .nayze-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: bottom;
+      position: relative;
+      z-index: 5;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 12px rgba(255, 0, 85, 0.45));
+      animation: avatar-breathe 2.8s ease-in-out infinite alternate;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.25s;
+    }
+
+    .hotspot-nayze-container:hover .nayze-avatar-img {
+      transform: scale(1.05) translateY(-3px);
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 24px var(--primary));
+    }
+
+    /* Floating Tooltips / Badges */
+    .floating-badge {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.88);
+      color: #fff;
+      border: 2px solid var(--yellow);
+      padding: 6px 12px;
+      font-size: 10px;
+      font-family: 'Press Start 2P', monospace;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 230, 0, 0.5);
+      border-radius: 4px;
+      animation: bounce 1.8s infinite alternate;
+      z-index: 30;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-monitor {
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .badge-nayze {
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .badge-ipod {
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    /* Top Centered Logo (NAYCE NAME LOBBY.png) */
+    .lobby-logo-container {
+      position: absolute;
+      top: 3.5%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 25%;
+      max-width: 330px;
+      pointer-events: none;
+      z-index: 25;
+      filter: drop-shadow(0 0 16px rgba(255, 0, 85, 0.75)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
+      animation: logo-glow 3s infinite alternate;
+    }
+
+    .lobby-logo-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    @keyframes logo-glow {
+      0% { filter: drop-shadow(0 0 10px rgba(255, 0, 85, 0.5)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)); }
+      100% { filter: drop-shadow(0 0 24px rgba(255, 0, 85, 0.95)) drop-shadow(0 4px 14px var(--cyan-glow)); }
+    }
+
+    /* Bottom Centered Pre-Save Button (PRE_SAVE_BUTTON-removebg-preview.png) */
+    .lobby-presave-banner-btn {
+      position: absolute;
+      bottom: 2.8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 23%;
+      max-width: 290px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      z-index: 30;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s;
+      filter: drop-shadow(0 0 12px rgba(255, 0, 85, 0.7)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.9));
+    }
+
+    .lobby-presave-banner-btn:hover {
+      transform: translateX(-50%) scale(1.08) translateY(-3px);
+      filter: drop-shadow(0 0 26px var(--cyan)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.95));
+    }
+
+    .lobby-presave-banner-btn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    .lobby-presave-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Studio Floor Contact & Ambient Shadow for NAYZE */
+    .avatar-floor-shadow-ambient {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120%;
+      height: 36px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.45) 45%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      filter: blur(5px);
+    }
+
+    .avatar-floor-shadow-contact {
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 20px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.8) 40%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 2;
+      filter: blur(1.5px);
+    }
+
+    /* Right-side Interactive Studio iPod Station */
+    .hotspot-ipod-container {
+      position: absolute;
+      bottom: 5.5%;
+      right: 6.5%;
+      width: 21%;
+      max-width: 280px;
+      cursor: pointer;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .ipod-station-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 0 14px var(--cyan-glow)) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.9));
+      animation: ipod-glow 2.7s ease-in-out infinite alternate;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .hotspot-ipod-container:hover .ipod-station-img {
+      transform: scale(1.07) translateY(-4px);
+      filter: drop-shadow(0 0 25px var(--cyan)) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.95));
+    }
+
+    .ipod-floor-shadow {
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 85%;
+      height: 18px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    @keyframes ipod-glow {
+      0% { filter: drop-shadow(0 0 8px var(--cyan-glow)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.85)); }
+      100% { filter: drop-shadow(0 0 22px var(--cyan)) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.95)); }
+    }
+
+    /* Modal 3: Studio iPod & Vinyl Discs Player */
+    .lobby-ipod-card {
+      position: relative;
+      background: #0b0d17;
+      border: 4px solid var(--cyan);
+      box-shadow: 10px 10px 0px var(--primary), 0 0 45px rgba(0, 240, 255, 0.45);
+      padding: 26px 22px;
+      width: 92%;
+      max-width: 620px;
+      border-radius: 6px;
+      animation: popIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .lobby-ipod-lcd {
+      background: var(--green-lcd);
+      color: var(--green-lcd-dark);
+      padding: 12px 16px;
+      border: 3px solid var(--green-lcd-dark);
+      border-radius: 4px;
+      margin: 14px 0 16px 0;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.35);
+    }
+
+    .lcd-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .lcd-song-title {
+      font-size: 10px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 8px;
+    }
+
+    .lcd-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(15, 56, 15, 0.35);
+      border: 1px solid var(--green-lcd-dark);
+    }
+
+    .lcd-progress-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--green-lcd-dark);
+      transition: width 0.3s;
+    }
+
+    .lobby-discs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .lobby-disc-card {
+      background: #141726;
+      border: 2px solid #2d334d;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .lobby-disc-card.locked {
+      background: #0d0f1a;
+      border: 2px dashed #282f45;
+      opacity: 0.6;
+    }
+
+    .lobby-disc-card.unlocked {
+      background: #151829;
+      border: 2px solid var(--yellow);
+      box-shadow: 0 0 12px rgba(255, 230, 0, 0.35);
+      opacity: 1;
+    }
+
+    .lobby-card-disc-img {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      transition: transform 0.3s;
+    }
+
+    .lobby-card-disc-img.locked {
+      opacity: 0.25;
+      filter: grayscale(100%);
+    }
+
+    .lobby-card-disc-img.playing {
+      animation: discUnlockedSpin 3s linear infinite;
+      filter: drop-shadow(0 0 8px var(--yellow));
+    }
+
+    .lobby-card-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .disc-title {
+      font-size: 10px;
+      color: #fff;
+    }
+
+    .disc-status {
+      font-size: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .disc-status.locked {
+      color: #888;
+    }
+
+    .disc-status.unlocked {
+      color: var(--yellow);
+    }
+
+    .retro-btn-play {
+      background: #252a3f;
+      color: #fff;
+      border: 1px solid #4a547a;
+      padding: 6px 8px;
+      font-size: 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+
+    .retro-btn-play:not(:disabled):hover {
+      background: var(--cyan);
+      color: #000;
+      border-color: #fff;
+    }
+
+    .retro-btn-play.playing {
+      background: var(--primary);
+      color: #fff;
+      border-color: #fff;
+      animation: pulsePlay 1s infinite alternate;
+    }
+
+    .retro-btn-play:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .lobby-ipod-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-top: 2px dashed #2d334d;
+      padding-top: 14px;
+    }
+
+    .arcade-cta-btn {
+      background: linear-gradient(135deg, #ff0055, #ff3377);
+      color: #fff;
+      border: 2px solid #fff;
+      padding: 8px 14px;
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 3px;
+      box-shadow: 3px 3px 0 #000;
+      transition: all 0.15s;
+    }
+
+    .arcade-cta-btn:hover {
+      background: #fff;
+      color: #ff0055;
+      box-shadow: 3px 3px 0 var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    @keyframes monitor-glow {
+      0% { filter: drop-shadow(0 0 8px var(--cyan-glow)); }
+      100% { filter: drop-shadow(0 0 22px var(--cyan)); }
+    }
+
+    @keyframes avatar-breathe {
+      0% { transform: translateY(0) scaleY(1); }
+      100% { transform: translateY(-4px) scaleY(1.02); }
+    }
+
+    @keyframes bounce {
+      0% { transform: translateX(-50%) translateY(0); }
+      100% { transform: translateX(-50%) translateY(-6px); }
+    }
+
+    /* --- RPG DIALOGUE BOX --- */
+    .rpg-dialog-overlay {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 780px;
+      background: rgba(5, 5, 10, 0.96);
+      border: 4px solid #fff;
+      box-shadow: 8px 8px 0px var(--primary), 0 0 25px rgba(0, 0, 0, 0.9);
+      padding: 18px 24px;
+      z-index: 120;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      animation: dialogPop 0.25s ease-out;
+    }
+
+    @keyframes dialogPop {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.92); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    }
+
+    .rpg-avatar-box {
+      width: 75px;
+      height: 75px;
+      border: 3px solid var(--primary);
+      background: #111;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 3px 3px 0 #fff;
+    }
+
+    .rpg-avatar-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+
+    .rpg-content {
+      flex: 1;
+    }
+
+    .rpg-speaker {
+      font-size: 12px;
+      color: var(--primary);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .rpg-text {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #fff;
+      margin-bottom: 14px;
+      min-height: 40px;
+    }
+
+    .rpg-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: flex-end;
+    }
+
+    .rpg-btn {
+      background: #ffffff;
+      color: #000;
+      border: 3px solid #000;
+      padding: 10px 24px;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #777;
+      transition: all 0.15s;
+    }
+
+    .rpg-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: #fff;
+      box-shadow: 4px 4px 0 #fff;
+      transform: translate(-2px, -2px);
+    }
+
+    .rpg-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #fff;
+    }
+
+    /* --- MODAL BASE STYLING --- */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      background: #000;
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 14px;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 var(--primary);
+      transition: all 0.15s;
+      z-index: 250;
+    }
+
+    .close-modal-btn:hover {
+      background: var(--primary);
+      box-shadow: 3px 3px 0 #fff;
+      transform: scale(1.1);
+    }
+
+    /* --- MODAL 1: PRE-SAVE & SMART LINKS --- */
+    .presave-card {
+      position: relative;
+      background: #0e0f17;
+      border: 4px solid #fff;
+      box-shadow: 10px 10px 0px var(--primary), 0 0 35px rgba(255, 0, 85, 0.4);
+      padding: 35px 30px;
+      width: 90%;
+      max-width: 520px;
+      text-align: center;
+      border-radius: 4px;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .artist-logo {
+      font-size: 26px;
+      color: var(--primary);
+      text-shadow: 3px 3px 0 #000, 0 0 15px var(--primary-glow);
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+    }
+
+    .song-subtitle {
+      font-size: 11px;
+      color: var(--cyan);
+      margin-bottom: 22px;
+      letter-spacing: 1.5px;
+    }
+
+    .presave-cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #ff0055, #ff3377);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 16px 20px;
+      font-size: 13px;
+      border: 3px solid #ffffff;
+      box-shadow: 5px 5px 0px #ffffff;
+      cursor: pointer;
+      margin-bottom: 25px;
+      transition: all 0.2s;
+    }
+
+    .presave-cta-btn:hover {
+      background: #ffffff;
+      color: #ff0055;
+      box-shadow: 5px 5px 0px var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .smart-links-title {
+      font-size: 10px;
+      color: #aaa;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .smart-links-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .smart-link-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 8px;
+      background: #1b1d28;
+      border: 2px solid #33384e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .smart-link-btn:hover {
+      background: #272a3a;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+      transform: translateY(-2px);
+    }
+
+    .smart-link-btn.spotify:hover { border-color: #1DB954; box-shadow: 0 0 12px rgba(29, 185, 84, 0.6); }
+    .smart-link-btn.apple:hover { border-color: #FC3C44; box-shadow: 0 0 12px rgba(252, 60, 68, 0.6); }
+    .smart-link-btn.youtube:hover { border-color: #FF0000; box-shadow: 0 0 12px rgba(255, 0, 0, 0.6); }
+    .smart-link-btn.tiktok:hover { border-color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.6); }
+
+    /* --- MODAL 2: 8-BIT ARCADE MINIGAME --- */
+    .arcade-machine {
+      position: relative;
+      width: 860px;
+      max-width: 98vw;
+      background: #090a10;
+      border: 4px solid #fff;
+      box-shadow: 12px 12px 0px #1f2333, 0 0 45px rgba(0, 240, 255, 0.3);
+      padding: 14px;
+      border-radius: 6px;
+    }
+
+    /* iPod Unit Header */
+    .ipod-console {
+      background: #13151f;
+      border: 3px solid #30354a;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .ipod-lcd {
+      background: var(--green-lcd);
+      color: var(--green-lcd-dark);
+      padding: 10px 14px;
+      border: 3px solid var(--green-lcd-dark);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.35);
+    }
+
+    .lcd-text {
+      font-size: 10px;
+      letter-spacing: 1px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lcd-equalizer {
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    .ipod-track-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .ipod-btn {
+      background: #212433;
+      border: 2px solid #484f6d;
+      color: #fff;
+      padding: 10px 8px;
+      font-size: 9px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .ipod-btn:not(:disabled):hover {
+      background: var(--primary);
+      border-color: #fff;
+      box-shadow: 0 0 10px var(--primary-glow);
+      transform: translateY(-2px);
+    }
+
+    .ipod-btn.playing {
+      background: var(--cyan);
+      color: #000;
+      border-color: #fff;
+      box-shadow: 0 0 15px var(--cyan);
+      animation: pulsePlay 1s infinite alternate;
+    }
+
+    @keyframes pulsePlay {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.04); }
+    }
+
+    .ipod-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      filter: grayscale(100%);
+    }
+
+    /* Canvas Frame */
+    .canvas-viewport {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      background: #000;
+      border: 3px solid #2b2e42;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* HUD Bar Inside Canvas */
+    .game-hud {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 64px;
+      background: rgba(8, 10, 16, 0.94);
+      border-top: 3px solid #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 18px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-player-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-avatar {
+      width: 44px;
+      height: 44px;
+      border: 2px solid #fff;
+      background: #111;
+      image-rendering: pixelated;
+      border-radius: 2px;
+    }
+
+    .hud-name-hearts {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-artist-name {
+      font-size: 11px;
+      color: var(--primary);
+      letter-spacing: 1px;
+    }
+
+    .hud-hearts-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pixel-heart {
+      filter: drop-shadow(0 0 5px rgba(255, 0, 85, 0.65));
+      transition: transform 0.15s ease;
+    }
+
+    .hud-enemy-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hud-enemy-title {
+      font-size: 9px;
+      color: #ff4444;
+      letter-spacing: 1px;
+    }
+
+    .hud-enemy-hp-bar {
+      width: 110px;
+      height: 10px;
+      background: #222;
+      border: 1px solid #fff;
+      overflow: hidden;
+    }
+
+    .hud-enemy-hp-fill {
+      width: 100%;
+      height: 100%;
+      background: #ff0033;
+      transition: width 0.2s ease-out;
+    }
+
+    .hud-discs-inventory {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-disc-wrapper {
+      position: relative;
+      width: 38px;
+      height: 38px;
+    }
+
+    .hud-disc-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      transition: all 0.3s;
+    }
+
+    .hud-disc-img.locked {
+      opacity: 0.22;
+      filter: grayscale(100%);
+    }
+
+    .hud-disc-img.unlocked {
+      opacity: 1;
+      filter: drop-shadow(0 0 6px var(--yellow));
+      animation: discUnlockedSpin 4s linear infinite;
+    }
+
+    @keyframes discUnlockedSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Game Notifications Overlay */
+    .game-toast {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 3px solid var(--yellow);
+      color: var(--yellow);
+      padding: 10px 20px;
+      font-size: 11px;
+      border-radius: 4px;
+      box-shadow: 0 0 20px rgba(255, 230, 0, 0.5);
+      z-index: 25;
+      text-align: center;
+      pointer-events: none;
+      animation: toastIn 0.3s ease-out;
+    }
+
+    @keyframes toastIn {
+      0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Controls Hint Bar */
+    .controls-hint {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: #8890b0;
+      font-size: 9px;
+      padding: 0 6px;
+    }
+
+    .controls-hint span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kbd {
+      background: #25283a;
+      color: #fff;
+      border: 1px solid #52597d;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Virtual Gamepad for Mobile */
+    .virtual-gamepad {
+      display: none;
+      position: absolute;
+      bottom: 74px;
+      left: 0;
+      width: 100%;
+      padding: 0 16px;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .dpad-cluster, .action-cluster {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .virtual-btn {
+      background: rgba(14, 16, 26, 0.88);
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 11px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    .virtual-btn:active {
+      background: var(--primary);
+      border-color: var(--yellow);
+      transform: scale(0.95);
+    }
+
+    .virtual-btn.btn-action {
+      border-color: var(--cyan);
+    }
+
+    /* --- RESPONSIVE ADAPTATIONS --- */
+    @media (max-width: 860px) {
+      .virtual-gamepad {
+        display: flex;
+      }
+
+      .arcade-machine {
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .canvas-viewport {
+        height: calc(100vh - 170px);
+      }
+
+      .controls-hint {
+        display: none;
+      }
+
+      .hotspot-monitor-hotspot {
+        top: 23.5%;
+        left: 42.5%;
+        width: 19%;
+        height: 21%;
+      }
+
+      .hotspot-nayze-container {
+        width: 32%;
+        height: 72%;
+        left: 5%;
+        bottom: 2.5%;
+      }
+
+      .rpg-dialog-overlay {
+        bottom: 12px;
+        padding: 12px 14px;
+      }
+
+      .rpg-avatar-box {
+        width: 55px;
+        height: 55px;
+      }
+
+      .rpg-text {
+        font-size: 10px;
+      }
+
+      .rpg-btn {
+        padding: 8px 16px;
+        font-size: 9px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- RETRO CRT SCANLINE OVERLAY -->
+  <div class="scanlines"></div>
+
+  <!-- TOP STATUS & AUDIO CONTROLS -->
+  <div class="top-controls">
+    <button id="toggle-audio-btn" class="audio-btn retro-font" title="Activar/Silenciar Audio">
+      <span id="audio-icon">🔊</span> AUDIO: <span id="audio-state-text">ON</span>
+    </button>
+  </div>
+
+  <!-- STUDIO LOBBY EXPERIENCE -->
+  <main class="lobby-wrapper" id="lobby-scene">
+    <div class="studio-stage">
+      <!-- Studio Room Background -->
+      <img src="LOBBY/fondo_estudio.png" alt="Estudio NAYZE" id="studio-bg" onerror="this.src='LOBBY/fondo_estudio.jpg'">
+
+      <!-- Top Centered Logo (NAYCE NAME LOBBY.png) -->
+      <div class="lobby-logo-container">
+        <img src="LOBBY/NAYCE NAME LOBBY.png" alt="NAYCE Logo" class="lobby-logo-img">
+      </div>
+
+      <!-- Monitor Screen Overlay (Conserva las dimensiones 1:1 exactas sobre el fondo del estudio) -->
+      <img src="LOBBY/pantalla_monitor.png" alt="Monitor de Estudio" id="monitor-overlay" class="monitor-layer-overlay">
+
+      <!-- Hotspot 1: Studio Monitor Clickable Area (Pre-Save & Smart Links) -->
+      <div id="hotspot-monitor" class="hotspot-monitor-hotspot" title="Abrir Monitor de Lanzamiento & Pre-Save">
+        <span class="floating-badge badge-monitor">🖥️ MONITOR: PRE-SAVE</span>
+      </div>
+
+      <!-- Bottom Centered Pre-Save Button (PRE_SAVE_BUTTON-removebg-preview.png) -->
+      <button id="lobby-presave-btn" class="lobby-presave-banner-btn" title="Pre-Save Canción Oficial">
+        <img src="LOBBY/PRE_SAVE_BUTTON-removebg-preview.png" alt="Pre-Save Ahora" class="lobby-presave-img">
+      </button>
+
+      <!-- Hotspot 2: NAYZE Avatar (Más grande, con doble sombra en el piso e iluminación de estudio) -->
+      <div id="hotspot-nayze" class="hotspot-nayze-container" title="Hablar con NAYZE">
+        <span class="floating-badge badge-nayze">💬 NAYZE: ¡HÁBLAME!</span>
+        <div class="avatar-floor-shadow-ambient"></div>
+        <div class="avatar-floor-shadow-contact"></div>
+        <img src="LOBBY/avatar NAYZE.png?v=3" alt="Avatar NAYZE" class="nayze-avatar-img">
+      </div>
+
+      <!-- Hotspot 3: Interactive iPod Station (Right Side of Studio) -->
+      <div id="hotspot-ipod-station" class="hotspot-ipod-container" title="Abrir Reproductor iPod y Discos">
+        <span class="floating-badge badge-ipod">🎧 IPOD STUDIO (Tracks)</span>
+        <div class="ipod-floor-shadow"></div>
+        <img src="LOBBY/ipod_station.png" alt="Reproductor iPod del Estudio" class="ipod-station-img">
+      </div>
+    </div>
+  </main>
+
+  <!-- RPG DIALOGUE BOX -->
+  <section id="rpg-dialog" class="rpg-dialog-overlay hidden" aria-modal="true" role="dialog">
+    <div class="rpg-avatar-box">
+      <img src="SPRITE DE MOVIMIENTOS/SPRITE NAYCE/FOTO DE PERFIL NAYZE.png" alt="NAYZE Portrait" onerror="this.src='LOBBY/avatar NAYZE.png'">
+    </div>
+    <div class="rpg-content">
+      <h3 class="rpg-speaker retro-font">NAYZE</h3>
+      <p id="rpg-text-element" class="rpg-text retro-font">¡Hola! Soy NAYZE. ¿Quieres jugar para desbloquear adelantos exclusivos de mi nueva canción?</p>
+      <div class="rpg-buttons">
+        <button id="btn-dialog-yes" class="rpg-btn retro-font">SÍ</button>
+        <button id="btn-dialog-no" class="rpg-btn retro-font">NO</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL 1: PRE-SAVE & SMART LINKS -->
+  <div id="modal-presave" class="modal-backdrop hidden" role="dialog" aria-label="Pre-save y Redes">
+    <div class="presave-card">
+      <button class="close-modal-btn retro-font" id="close-presave" aria-label="Cerrar modal">X</button>
+      
+      <h2 class="artist-logo retro-font">NAYZE</h2>
+      <p class="song-subtitle retro-font">NUEVO LANZAMIENTO EXCLUSIVO</p>
+
+      <a href="https://api.nayzemusic.com/v1/presave" target="_blank" rel="noopener" class="presave-cta-btn retro-font" id="btn-main-presave">
+        <span>💿</span> PRE-SAVE CANCIÓN OFICIAL
+      </a>
+
+      <p class="smart-links-title retro-font">Escúchame en plataformas oficiales</p>
+      <div class="smart-links-grid">
+        <button class="smart-link-btn spotify retro-font" onclick="smartRedirect('spotify')">
+          <span style="color:#1DB954;">●</span> Spotify
+        </button>
+        <button class="smart-link-btn apple retro-font" onclick="smartRedirect('apple_music')">
+          <span style="color:#FC3C44;">●</span> Apple Music
+        </button>
+        <button class="smart-link-btn youtube retro-font" onclick="smartRedirect('youtube')">
+          <span style="color:#FF0000;">●</span> YouTube
+        </button>
+        <button class="smart-link-btn tiktok retro-font" onclick="smartRedirect('tiktok')">
+          <span style="color:#00f2fe;">●</span> TikTok
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: 8-BIT ARCADE MINIGAME -->
+  <div id="modal-game" class="modal-backdrop hidden" role="dialog" aria-label="Arcade Minigame">
+    <div class="arcade-machine">
+      <button class="close-modal-btn retro-font" id="close-game" aria-label="Cerrar juego">X</button>
+
+      <!-- iPod Top Audio Unit -->
+      <div class="ipod-console">
+        <div class="ipod-lcd">
+          <div class="lcd-text retro-font" id="ipod-status">IPOD BLOQUEADO: Vence a los enemigos para desbloquear</div>
+          <div class="lcd-equalizer retro-font" id="ipod-equalizer"> ▂▃▅</div>
+        </div>
+        <div class="ipod-track-grid">
+          <button class="ipod-btn retro-font" id="ipod-track-1" disabled onclick="playTrack(1)">
+            <span>TRACK 1</span>
+            <small id="track-label-1">🔒 BLOQUEADO</small>
+          </button>
+          <button class="ipod-btn retro-font" id="ipod-track-2" disabled onclick="playTrack(2)">
+            <span>TRACK 2</span>
+            <small id="track-label-2">🔒 BLOQUEADO</small>
+          </button>
+          <button class="ipod-btn retro-font" id="ipod-track-3" disabled onclick="playTrack(3)">
+            <span>TRACK 3</span>
+            <small id="track-label-3">🔒 BLOQUEADO</small>
+          </button>
+          <button class="ipod-btn retro-font" id="ipod-track-4" disabled onclick="playTrack(4)">
+            <span>TRACK 4</span>
+            <small id="track-label-4">🔒 BLOQUEADO</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Canvas Screen -->
+      <div class="canvas-viewport" id="canvas-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div id="game-toast" class="game-toast retro-font hidden"></div>
+
+        <!-- Virtual Gamepad for Mobile -->
+        <div id="virtual-gamepad" class="virtual-gamepad">
+          <div class="dpad-cluster">
+            <button id="btn-left" class="virtual-btn retro-font">◀ IZQ</button>
+            <button id="btn-right" class="virtual-btn retro-font">DER ▶</button>
+          </div>
+          <div class="action-cluster">
+            <button id="btn-jump" class="virtual-btn btn-action retro-font" style="border-color: var(--yellow);">🦘 SALTO (W)</button>
+            <button id="btn-punch" class="virtual-btn btn-action retro-font">👊 GOLPE (Z)</button>
+            <button id="btn-kick" class="virtual-btn btn-action retro-font">🦶 PATADA (X)</button>
+          </div>
+        </div>
+
+        <!-- HUD Bar Inside Canvas -->
+        <div class="game-hud">
+          <div class="hud-player-info">
+            <img src="SPRITE DE MOVIMIENTOS/SPRITE NAYCE/FOTO DE PERFIL NAYZE.png" alt="NAYZE" class="hud-avatar" onerror="this.src='LOBBY/avatar NAYZE.png'">
+            <div class="hud-name-hearts">
+              <span class="hud-artist-name retro-font">NAYZE</span>
+              <div class="hud-hearts-row" id="player-hearts-container">
+                <span>❤️</span><span>❤️</span><span>❤️</span><span>❤️</span><span>❤️</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-enemy-info" id="enemy-hud-box">
+            <span class="hud-enemy-title retro-font" id="hud-enemy-label">ENEMIGO [X-36] #1/4</span>
+            <div class="hud-enemy-hp-bar">
+              <div class="hud-enemy-hp-fill" id="enemy-hp-fill"></div>
+            </div>
+          </div>
+
+          <div class="hud-discs-inventory">
+            <div class="hud-disc-wrapper" title="Track 1 Disc">
+              <img id="disc-1" src="DISK/disc_track_1.png" class="hud-disc-img locked" alt="Disco 1" onerror="this.src='DISC/DISC TRACK 1.png'">
+            </div>
+            <div class="hud-disc-wrapper" title="Track 2 Disc">
+              <img id="disc-2" src="DISK/disc_track_2.png" class="hud-disc-img locked" alt="Disco 2" onerror="this.src='DISC/DISC TRACK 2.png'">
+            </div>
+            <div class="hud-disc-wrapper" title="Track 3 Disc">
+              <img id="disc-3" src="DISK/disc_track_3.png" class="hud-disc-img locked" alt="Disco 3" onerror="this.src='DISC/DISC TRACK 3.png'">
+            </div>
+            <div class="hud-disc-wrapper" title="Track 4 Disc">
+              <img id="disc-4" src="DISK/disc_track_4.png" class="hud-disc-img locked" alt="Disco 4" onerror="this.src='DISC/DISC TRACK 4.png'">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Hint Bar (PC) -->
+      <div class="controls-hint retro-font">
+        <span><kbd class="kbd">◀</kbd> <kbd class="kbd">▶</kbd> o <kbd class="kbd">A</kbd> <kbd class="kbd">D</kbd> Moverse</span>
+        <span><kbd class="kbd">▲</kbd> / <kbd class="kbd">W</kbd> / <kbd class="kbd">Espacio</kbd> Salto</span>
+        <span><kbd class="kbd">Z</kbd> Puñetazo</span>
+        <span><kbd class="kbd">X</kbd> Patada</span>
+        <span><kbd class="kbd">ESC</kbd> Salir</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: STUDIO LOBBY IPOD & VINYL DISCS PLAYER -->
+  <div id="modal-ipod-lobby" class="modal-backdrop hidden" role="dialog" aria-label="Reproductor iPod del Estudio">
+    <div class="lobby-ipod-card">
+      <button class="close-modal-btn retro-font" id="close-ipod-lobby" aria-label="Cerrar iPod">X</button>
+
+      <div style="text-align: center; margin-bottom: 8px;">
+        <span class="song-subtitle retro-font" style="color: var(--cyan); letter-spacing: 2px;">🎧 REPRODUCTOR DE ESTUDIO</span>
+        <h2 class="retro-font" style="font-size: 14px; margin: 4px 0 0 0; color: #fff; text-shadow: 0 0 8px var(--cyan);">NAYZE // ARCHIVOS DE DISCOS</h2>
+      </div>
+
+      <!-- Green LCD Screen -->
+      <div class="lobby-ipod-lcd">
+        <div class="lcd-top-bar retro-font">
+          <span id="lobby-ipod-status">BLOQUEADO 🔒</span>
+          <span id="lobby-ipod-eq"> ▂▃▅</span>
+        </div>
+        <div class="lcd-song-title retro-font" id="lobby-ipod-title">
+          🔒 DISCOS BLOQUEADOS // GANA EN EL ARCADE PARA ESCUCHAR
+        </div>
+        <div class="lcd-progress-bar">
+          <div class="lcd-progress-fill" id="lobby-ipod-progress"></div>
+        </div>
+      </div>
+
+      <!-- 2x2 Discs Grid -->
+      <div class="lobby-discs-grid" id="lobby-discs-container">
+        <!-- Disc 1 -->
+        <div class="lobby-disc-card locked" id="lobby-disc-card-1">
+          <img src="DISK/disc_track_1.png" alt="Disco 1" class="lobby-card-disc-img locked" id="lobby-disc-img-1" onerror="this.src='DISC/DISC TRACK 1.png'">
+          <div class="lobby-card-info">
+            <span class="disc-title retro-font">TRACK 01</span>
+            <span class="disc-status retro-font locked" id="lobby-disc-status-1">🔒 BLOQUEADO</span>
+            <button class="retro-btn-play retro-font locked" id="lobby-play-btn-1" disabled onclick="playTrackFromLobby(1)">🔒 BLOQUEADO</button>
+          </div>
+        </div>
+
+        <!-- Disc 2 -->
+        <div class="lobby-disc-card locked" id="lobby-disc-card-2">
+          <img src="DISK/disc_track_2.png" alt="Disco 2" class="lobby-card-disc-img locked" id="lobby-disc-img-2" onerror="this.src='DISC/DISC TRACK 2.png'">
+          <div class="lobby-card-info">
+            <span class="disc-title retro-font">TRACK 02</span>
+            <span class="disc-status retro-font locked" id="lobby-disc-status-2">🔒 BLOQUEADO</span>
+            <button class="retro-btn-play retro-font locked" id="lobby-play-btn-2" disabled onclick="playTrackFromLobby(2)">🔒 BLOQUEADO</button>
+          </div>
+        </div>
+
+        <!-- Disc 3 -->
+        <div class="lobby-disc-card locked" id="lobby-disc-card-3">
+          <img src="DISK/disc_track_3.png" alt="Disco 3" class="lobby-card-disc-img locked" id="lobby-disc-img-3" onerror="this.src='DISC/DISC TRACK 3.png'">
+          <div class="lobby-card-info">
+            <span class="disc-title retro-font">TRACK 03</span>
+            <span class="disc-status retro-font locked" id="lobby-disc-status-3">🔒 BLOQUEADO</span>
+            <button class="retro-btn-play retro-font locked" id="lobby-play-btn-3" disabled onclick="playTrackFromLobby(3)">🔒 BLOQUEADO</button>
+          </div>
+        </div>
+
+        <!-- Disc 4 -->
+        <div class="lobby-disc-card locked" id="lobby-disc-card-4">
+          <img src="DISK/disc_track_4.png" alt="Disco 4" class="lobby-card-disc-img locked" id="lobby-disc-img-4" onerror="this.src='DISC/DISC TRACK 4.png'">
+          <div class="lobby-card-info">
+            <span class="disc-title retro-font">TRACK 04</span>
+            <span class="disc-status retro-font locked" id="lobby-disc-status-4">🔒 BLOQUEADO</span>
+            <button class="retro-btn-play retro-font locked" id="lobby-play-btn-4" disabled onclick="playTrackFromLobby(4)">🔒 BLOQUEADO</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer CTA to play arcade -->
+      <div class="lobby-ipod-footer">
+        <span class="retro-font" style="font-size: 8px; color: #8892b0;" id="lobby-ipod-summary">DISCOS: 0/4 CONSEGUIDOS</span>
+        <button id="btn-reset-discs" class="retro-font" style="background:transparent; border:1px solid #333d59; color:#6b789e; padding:4px 8px; font-size:7px; border-radius:3px; cursor:pointer;" title="Reiniciar progreso de discos">🔄 REINICIAR</button>
+        <button id="btn-play-arcade-from-ipod" class="arcade-cta-btn retro-font">🎮 JUGAR ARCADE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       1. SMART LINKING & UNIVERSAL DEEP LINKS
+       ========================================================= */
+    const SOCIAL_LINKS = {
+      spotify: {
+        mobile: "spotify://artist/NAYZE_ID",
+        web: "https://open.spotify.com/artist/NAYZE_ID"
+      },
+      apple_music: {
+        mobile: "music://itunes.apple.com/artist/NAYZE_ID",
+        web: "https://music.apple.com/artist/NAYZE_ID"
+      },
+      youtube: {
+        mobile: "vnd.youtube://www.youtube.com/@NAYZE",
+        web: "https://www.youtube.com/@NAYZE"
+      },
+      tiktok: {
+        mobile: "snssdk1128://user/profile/NAYZE_ID",
+        web: "https://www.tiktok.com/@NAYZE"
+      }
+    };
+
+    function smartRedirect(platform) {
+      playSoundEffect('click');
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const link = SOCIAL_LINKS[platform];
+      if (!link) return;
+
+      if (isMobile && link.mobile) {
+        const start = Date.now();
+        window.location.href = link.mobile;
+        // Fallback to web if app is not installed
+        setTimeout(() => {
+          if (Date.now() - start < 1500) {
+            window.open(link.web, '_blank');
+          }
+        }, 1000);
+      } else {
+        window.open(link.web, '_blank');
+      }
+    }
+
+    /* =========================================================
+       2. WEB AUDIO API - 8-BIT SOUND SYNTHESIZER
+       ========================================================= */
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    // Toggle global audio
+    const toggleAudioBtn = document.getElementById('toggle-audio-btn');
+    const audioIcon = document.getElementById('audio-icon');
+    const audioStateText = document.getElementById('audio-state-text');
+
+    toggleAudioBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      audioIcon.innerText = soundEnabled ? '🔊' : '🔇';
+      audioStateText.innerText = soundEnabled ? 'ON' : 'OFF';
+      if (!soundEnabled) {
+        stopAllTracks();
+      }
+    });
+
+    function playSoundEffect(type) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+
+        if (type === 'punch') {
+          // Fast punchy square wave drop
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(45, now + 0.09);
+
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } else if (type === 'kick') {
+          // Deep triangle drop with quick kick transient
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.exponentialRampToValueAtTime(28, now + 0.16);
+
+          gain.gain.setValueAtTime(0.5, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } else if (type === 'jump') {
+          // Retro spring jump sound (frequency rises from 140Hz up to 450Hz)
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.15);
+
+          gain.gain.setValueAtTime(0.32, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'enemy_hit') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.linearRampToValueAtTime(100, now + 0.1);
+
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === 'player_hurt') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(35, now + 0.22);
+
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } else if (type === 'enemy_defeated') {
+          // Descending chiptune explosion
+          const notes = [380, 310, 240, 180, 120, 70];
+          notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const startT = now + idx * 0.045;
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, startT);
+
+            gain.gain.setValueAtTime(0.28, startT);
+            gain.gain.exponentialRampToValueAtTime(0.01, startT + 0.05);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(startT);
+            osc.stop(startT + 0.05);
+          });
+        } else if (type === 'disc_unlock') {
+          // Super triumphant ascending chiptune arpeggio
+          const notes = [261.6, 329.6, 392.0, 523.2, 659.2, 783.9, 1046.5];
+          notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const startT = now + idx * 0.055;
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, startT);
+
+            gain.gain.setValueAtTime(0.2, startT);
+            gain.gain.exponentialRampToValueAtTime(0.01, startT + 0.08);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(startT);
+            osc.stop(startT + 0.08);
+          });
+        } else if (type === 'click' || type === 'beep') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(type === 'click' ? 660 : 440, now);
+
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'game_start') {
+          const notes = [330, 440, 550, 660, 880];
+          notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const startT = now + idx * 0.06;
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, startT);
+
+            gain.gain.setValueAtTime(0.25, startT);
+            gain.gain.exponentialRampToValueAtTime(0.01, startT + 0.09);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(startT);
+            osc.stop(startT + 0.09);
+          });
+        }
+      } catch (e) {
+        console.warn('Audio synthesis issue:', e);
+      }
+    }
+
+    /* =========================================================
+       3. IPOD AUDIO TRACKS MANAGER & PERSISTENCE
+       ========================================================= */
+    // Fresh storage key so all tracks start strictly LOCKED until beaten in minigame
+    const STORAGE_KEY_DISCS = 'nayze_discs_unlocked_v3';
+    try {
+      localStorage.removeItem('nayze_unlocked_discs');
+      localStorage.removeItem('nayze_unlocked_discs_v1');
+      localStorage.removeItem('nayze_unlocked_discs_v2');
+    } catch(e) {}
+
+    function getSavedUnlockedDiscs() {
+      try {
+        const val = localStorage.getItem(STORAGE_KEY_DISCS);
+        return val ? Math.min(4, Math.max(0, parseInt(val, 10) || 0)) : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    function saveUnlockedDiscs(count) {
+      try {
+        const current = getSavedUnlockedDiscs();
+        const highest = Math.max(current, count);
+        localStorage.setItem(STORAGE_KEY_DISCS, highest.toString());
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+    }
+
+    const TRACK_METADATA = {
+      1: { name: "VUELVE BEBE // PISTA 1" },
+      2: { name: "VUELVE BEBE // PISTA 2" },
+      3: { name: "VUELVE BEBE // PISTA 3" },
+      4: { name: "VUELVE BEBE // PISTA 4" }
+    };
+
+    const audioFiles = {
+      1: new Audio('AUDIO/disc_track_1.wav?v=2'),
+      2: new Audio('AUDIO/disc_track_2.wav?v=2'),
+      3: new Audio('AUDIO/disc_track_3.wav?v=4'),
+      4: new Audio('AUDIO/disc_track_4.wav?v=2')
+    };
+
+    // Configure loop & error fallback
+    Object.entries(audioFiles).forEach(([num, a]) => {
+      a.loop = true;
+      a.volume = 0.85;
+      a.addEventListener('error', () => {
+        // Fallback directly to original directory if AUDIO failed
+        a.src = `VUELVE BEBE PISTAS DE DISC/VUELVE BEBE pista ${num}.wav?v=4`;
+      });
+      a.addEventListener('timeupdate', () => {
+        if (currentPlayingTrack == num) {
+          const progressPct = ((a.currentTime % 30) / 30) * 100;
+          const fill = document.getElementById('lobby-ipod-progress');
+          if (fill) fill.style.width = Math.min(100, progressPct) + '%';
+        }
+      });
+    });
+
+    let currentPlayingTrack = null;
+    let eqInterval = null;
+
+    function syncAllDiscsUI(unlockedCount) {
+      const count = typeof unlockedCount === 'number' ? unlockedCount : getSavedUnlockedDiscs();
+
+      // 1. Minigame HUD Discs
+      for (let i = 1; i <= 4; i++) {
+        const hudDisc = document.getElementById(`disc-${i}`);
+        if (hudDisc) {
+          if (i <= count) {
+            hudDisc.classList.remove('locked');
+            hudDisc.classList.add('unlocked');
+          } else {
+            hudDisc.classList.remove('unlocked');
+            hudDisc.classList.add('locked');
+          }
+        }
+
+        // 2. Minigame Top iPod Unit
+        const ipodBtn = document.getElementById(`ipod-track-${i}`);
+        const ipodLabel = document.getElementById(`track-label-${i}`);
+        if (ipodBtn) ipodBtn.disabled = (i > count);
+        if (ipodLabel) {
+          if (i <= count) {
+            ipodLabel.innerText = '⚡ LISTO';
+            ipodLabel.style.color = '#ffe600';
+          } else {
+            ipodLabel.innerText = '🔒 BLOQUEADO';
+            ipodLabel.style.color = '#888';
+          }
+        }
+
+        // 3. Studio Lobby iPod Modal Cards
+        const card = document.getElementById(`lobby-disc-card-${i}`);
+        const img = document.getElementById(`lobby-disc-img-${i}`);
+        const status = document.getElementById(`lobby-disc-status-${i}`);
+        const playBtn = document.getElementById(`lobby-play-btn-${i}`);
+
+        if (i <= count) {
+          if (card) {
+            card.classList.add('unlocked');
+            card.classList.remove('locked');
+          }
+          if (img) {
+            img.classList.remove('locked');
+            if (currentPlayingTrack === i) {
+              img.classList.add('playing');
+            } else {
+              img.classList.remove('playing');
+            }
+          }
+          if (status) {
+            status.innerText = '⚡ DESBLOQUEADO';
+            status.classList.remove('locked');
+            status.classList.add('unlocked');
+          }
+          if (playBtn) {
+            playBtn.disabled = false;
+            playBtn.classList.remove('locked');
+            if (currentPlayingTrack === i) {
+              playBtn.innerText = '⏸ PAUSA';
+              playBtn.classList.add('playing');
+            } else {
+              playBtn.innerText = '▶ ESCUCHAR';
+              playBtn.classList.remove('playing');
+            }
+          }
+        } else {
+          if (card) {
+            card.classList.remove('unlocked');
+            card.classList.add('locked');
+          }
+          if (img) {
+            img.classList.add('locked');
+            img.classList.remove('playing');
+          }
+          if (status) {
+            status.innerText = '🔒 BLOQUEADO';
+            status.classList.add('locked');
+            status.classList.remove('unlocked');
+          }
+          if (playBtn) {
+            playBtn.disabled = true;
+            playBtn.classList.add('locked');
+            playBtn.innerText = '🔒 BLOQUEADO';
+            playBtn.classList.remove('playing');
+          }
+        }
+      }
+
+      // Lobby summary
+      const summary = document.getElementById('lobby-ipod-summary');
+      if (summary) summary.innerText = `DISCOS: ${count}/4 CONSEGUIDOS`;
+
+      const lobbyTitle = document.getElementById('lobby-ipod-title');
+      if (lobbyTitle && !currentPlayingTrack) {
+        if (count >= 4) {
+          lobbyTitle.innerText = '🌟 ¡TODOS LOS DISCOS DESBLOQUEADOS!';
+        } else if (count > 0) {
+          lobbyTitle.innerText = `🎧 ${count}/4 DISCOS DESBLOQUEADOS // SELECCIONA UNO`;
+        } else {
+          lobbyTitle.innerText = '🔒 DISCOS BLOQUEADOS // GANA EN EL ARCADE PARA ESCUCHAR';
+        }
+      }
+
+      const lobbyStatus = document.getElementById('lobby-ipod-status');
+      if (lobbyStatus) {
+        lobbyStatus.innerText = count > 0 ? `DISCOS: ${count}/4 💿` : 'BLOQUEADO 🔒';
+      }
+
+      const ipodStatus = document.getElementById('ipod-status');
+      if (ipodStatus && !currentPlayingTrack) {
+        if (count >= 4) {
+          ipodStatus.innerText = '🌟 ¡TODOS LOS TRACKS DISPONIBLES! TOCA PARA ESCUCHAR';
+        } else if (count > 0) {
+          ipodStatus.innerText = `🎧 ${count} de 4 TRACKS DESBLOQUEADOS`;
+        } else {
+          ipodStatus.innerText = 'IPOD BLOQUEADO: Vence a los enemigos para desbloquear';
+        }
+      }
+    }
+
+    function playTrack(trackNum) {
+      getAudioContext();
+      playSoundEffect('click');
+      if (!soundEnabled) return;
+
+      const unlockedCount = getSavedUnlockedDiscs();
+      if (trackNum > unlockedDiscs && trackNum > unlockedCount) {
+        playSoundEffect('player_hurt');
+        return;
+      }
+
+      // If already playing this track, toggle pause
+      if (currentPlayingTrack === trackNum) {
+        stopAllTracks();
+        const ipodStatus = document.getElementById('ipod-status');
+        if (ipodStatus) ipodStatus.innerText = `Track ${trackNum} pausado.`;
+        const eq = document.getElementById('ipod-equalizer');
+        if (eq) eq.innerText = ' ▂▃▅';
+        syncAllDiscsUI();
+        return;
+      }
+
+      stopAllTracks();
+      const track = audioFiles[trackNum];
+      if (track) {
+        track.currentTime = 0;
+        track.play().catch(e => {
+          console.log('Audio file play error:', e);
+        });
+
+        currentPlayingTrack = trackNum;
+        const btn = document.getElementById(`ipod-track-${trackNum}`);
+        if (btn) btn.classList.add('playing');
+
+        const meta = TRACK_METADATA[trackNum] || { name: `TRACK ${trackNum}` };
+        const ipodStatus = document.getElementById('ipod-status');
+        if (ipodStatus) ipodStatus.innerText = `▶ Reproduciendo ${meta.name} [NAYZE 8-Bit]`;
+        startEqualizerAnimation();
+        syncAllDiscsUI();
+      }
+    }
+
+    function playTrackFromLobby(trackNum) {
+      getAudioContext();
+      playSoundEffect('click');
+      if (!soundEnabled) return;
+
+      // Strict lock guard: Cannot play locked track!
+      const unlockedCount = getSavedUnlockedDiscs();
+      if (trackNum > unlockedCount) {
+        playSoundEffect('player_hurt');
+        const titleElem = document.getElementById('lobby-ipod-title');
+        if (titleElem) titleElem.innerText = `🔒 TRACK 0${trackNum} BLOQUEADO // GANA EN ARCADE`;
+        return;
+      }
+
+      // If already playing this track, pause
+      if (currentPlayingTrack === trackNum) {
+        stopAllTracks();
+        const titleElem = document.getElementById('lobby-ipod-title');
+        if (titleElem) titleElem.innerText = `TRACK ${trackNum} PAUSADO`;
+        const eq = document.getElementById('lobby-ipod-eq');
+        if (eq) eq.innerText = ' ▂▃▅';
+        syncAllDiscsUI();
+        return;
+      }
+
+      stopAllTracks();
+      const track = audioFiles[trackNum];
+      if (track) {
+        track.currentTime = 0;
+        track.play().catch(e => {
+          console.log('Audio file play error:', e);
+        });
+
+        currentPlayingTrack = trackNum;
+        const meta = TRACK_METADATA[trackNum] || { name: `TRACK ${trackNum}` };
+        const titleElem = document.getElementById('lobby-ipod-title');
+        if (titleElem) titleElem.innerText = `▶ REPRODUCIENDO: ${meta.name}`;
+        
+        startEqualizerAnimation();
+        syncAllDiscsUI();
+      }
+    }
+
+    function stopAllTracks() {
+      Object.values(audioFiles).forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById(`ipod-track-${i}`);
+        if (btn) btn.classList.remove('playing');
+        const lobbyBtn = document.getElementById(`lobby-play-btn-${i}`);
+        if (lobbyBtn) {
+          lobbyBtn.classList.remove('playing');
+          if (!lobbyBtn.disabled) lobbyBtn.innerText = '▶ ESCUCHAR';
+        }
+        const lobbyImg = document.getElementById(`lobby-disc-img-${i}`);
+        if (lobbyImg) lobbyImg.classList.remove('playing');
+      }
+      currentPlayingTrack = null;
+      if (eqInterval) clearInterval(eqInterval);
+      const eq1 = document.getElementById('ipod-equalizer');
+      if (eq1) eq1.innerText = ' ▂▃▅';
+      const eq2 = document.getElementById('lobby-ipod-eq');
+      if (eq2) eq2.innerText = ' ▂▃▅';
+      const fill = document.getElementById('lobby-ipod-progress');
+      if (fill) fill.style.width = '0%';
+    }
+
+    function startEqualizerAnimation() {
+      if (eqInterval) clearInterval(eqInterval);
+      const frames = [' ▂▃▅▆▇', '▃▅▇▅▃ ', '▅▇▆▃▂ ', '▇▆▅▃▂ ', ' ▂▃▅▃▂'];
+      let fIndex = 0;
+      eqInterval = setInterval(() => {
+        if (!currentPlayingTrack) {
+          clearInterval(eqInterval);
+          return;
+        }
+        const frame = frames[fIndex % frames.length];
+        const eq1 = document.getElementById('ipod-equalizer');
+        if (eq1) eq1.innerText = frame;
+        const eq2 = document.getElementById('lobby-ipod-eq');
+        if (eq2) eq2.innerText = frame;
+        fIndex++;
+      }, 150);
+    }
+
+    /* =========================================================
+       4. MODALS & RPG DIALOGUE CONTROLLERS
+       ========================================================= */
+    const modalPresave = document.getElementById('modal-presave');
+    const modalGame = document.getElementById('modal-game');
+    const modalIpodLobby = document.getElementById('modal-ipod-lobby');
+    const rpgDialog = document.getElementById('rpg-dialog');
+
+    // Monitor Hotspot -> Modal Pre-Save
+    document.getElementById('hotspot-monitor').addEventListener('click', () => {
+      getAudioContext();
+      playSoundEffect('beep');
+      modalPresave.classList.remove('hidden');
+    });
+
+    // Bottom Centered Pre-Save Button -> Same as Monitor (Modal Pre-Save)
+    const lobbyPresaveBtn = document.getElementById('lobby-presave-btn');
+    if (lobbyPresaveBtn) {
+      lobbyPresaveBtn.addEventListener('click', () => {
+        getAudioContext();
+        playSoundEffect('beep');
+        modalPresave.classList.remove('hidden');
+      });
+    }
+
+    // Interactive iPod Station -> Modal iPod Lobby
+    const hotspotIpodStation = document.getElementById('hotspot-ipod-station');
+    if (hotspotIpodStation) {
+      hotspotIpodStation.addEventListener('click', () => {
+        getAudioContext();
+        playSoundEffect('beep');
+        syncAllDiscsUI();
+        modalIpodLobby.classList.remove('hidden');
+      });
+    }
+
+    // Close iPod Lobby Modal
+    const closeIpodLobbyBtn = document.getElementById('close-ipod-lobby');
+    if (closeIpodLobbyBtn) {
+      closeIpodLobbyBtn.addEventListener('click', () => {
+        playSoundEffect('click');
+        modalIpodLobby.classList.add('hidden');
+        stopAllTracks();
+      });
+    }
+
+    // Play Arcade from Lobby iPod
+    const btnPlayArcadeFromIpod = document.getElementById('btn-play-arcade-from-ipod');
+    if (btnPlayArcadeFromIpod) {
+      btnPlayArcadeFromIpod.addEventListener('click', () => {
+        playSoundEffect('game_start');
+        modalIpodLobby.classList.add('hidden');
+        stopAllTracks();
+        modalGame.classList.remove('hidden');
+        initGame();
+      });
+    }
+
+    // Reset Discs Progress Button
+    const btnResetDiscs = document.getElementById('btn-reset-discs');
+    if (btnResetDiscs) {
+      btnResetDiscs.addEventListener('click', () => {
+        playSoundEffect('player_hurt');
+        try {
+          localStorage.removeItem(STORAGE_KEY_DISCS);
+          localStorage.removeItem('nayze_unlocked_discs');
+          localStorage.removeItem('nayze_unlocked_discs_v1');
+          localStorage.removeItem('nayze_unlocked_discs_v2');
+        } catch(e) {}
+        unlockedDiscs = 0;
+        currentEnemyNumber = 1;
+        stopAllTracks();
+        syncAllDiscsUI(0);
+        showToast('🔄 PROGRESO REINICIADO: TODOS LOS DISCOS BLOQUEADOS', 2500);
+      });
+    }
+
+    // NAYZE Avatar Hotspot -> RPG Dialogue
+    document.getElementById('hotspot-nayze').addEventListener('click', () => {
+      getAudioContext();
+      playSoundEffect('beep');
+      rpgDialog.classList.remove('hidden');
+    });
+
+    // RPG Dialogue buttons
+    document.getElementById('btn-dialog-no').addEventListener('click', () => {
+      playSoundEffect('click');
+      rpgDialog.classList.add('hidden');
+    });
+
+    document.getElementById('btn-dialog-yes').addEventListener('click', () => {
+      playSoundEffect('game_start');
+      rpgDialog.classList.add('hidden');
+      modalGame.classList.remove('hidden');
+      initGame();
+    });
+
+    // Close buttons
+    document.getElementById('close-presave').addEventListener('click', () => {
+      playSoundEffect('click');
+      modalPresave.classList.add('hidden');
+    });
+
+    document.getElementById('close-game').addEventListener('click', () => {
+      playSoundEffect('click');
+      modalGame.classList.add('hidden');
+      stopAllTracks();
+      if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    });
+
+    // Backdrop clicks dismiss modals
+    [modalPresave, modalGame, modalIpodLobby].forEach(modal => {
+      if (!modal) return;
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          playSoundEffect('click');
+          modal.classList.add('hidden');
+          if (modal === modalGame || modal === modalIpodLobby) {
+            stopAllTracks();
+            if (gameLoopId && modal === modalGame) cancelAnimationFrame(gameLoopId);
+          }
+        }
+      });
+    });
+
+    // ESC key closes any open modal or dialogue
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        modalPresave.classList.add('hidden');
+        rpgDialog.classList.add('hidden');
+        if (modalIpodLobby) {
+          modalIpodLobby.classList.add('hidden');
+          stopAllTracks();
+        }
+        if (!modalGame.classList.contains('hidden')) {
+          modalGame.classList.add('hidden');
+          stopAllTracks();
+          if (gameLoopId) cancelAnimationFrame(gameLoopId);
+        }
+      }
+    });
+
+    // Initial sync of discs UI from storage on page load
+    syncAllDiscsUI();
+
+    /* =========================================================
+       5. 8-BIT MINIGAME ENGINE (CANVAS 800x400)
+       ========================================================= */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Preload Background
+    const bgImg = new Image();
+    bgImg.src = 'ECENARIO/ECENARIO.jpg';
+
+    // Preload NAYZE Sprites
+    const playerSprites = {
+      idle: new Image(),
+      walk1: new Image(),
+      walk2: new Image(),
+      walk3: new Image(),
+      punch: new Image(),
+      kick: new Image(),
+      jump: new Image(),
+      dead: new Image(),
+      profile: new Image()
+    };
+    playerSprites.idle.src = 'spritemovimiento/spritenayze/nayzeparado.png';
+    playerSprites.walk1.src = 'spritemovimiento/spritenayze/nayzecaminando1.png';
+    playerSprites.walk2.src = 'spritemovimiento/spritenayze/nayzecaminando2.png';
+    playerSprites.walk3.src = 'spritemovimiento/spritenayze/nayzecaminando3.png';
+    playerSprites.punch.src = 'spritemovimiento/spritenayze/GOLPE NAYZE.png';
+    playerSprites.kick.src = 'spritemovimiento/spritenayze/PATADA NAYZE.png';
+    playerSprites.jump.src = 'spritemovimiento/spritenayze/SALTO NAYZE.png';
+    playerSprites.dead.src = 'spritemovimiento/spritenayze/NAYZE MUERTO.png';
+    playerSprites.profile.src = 'spritemovimiento/spritenayze/FOTO DE PERFIL NAYZE.png';
+
+    // Preload Enemy Sprites (X-36)
+    const enemySprites = {
+      idle: new Image(),
+      walk1: new Image(),
+      walk2: new Image(),
+      walk3: new Image(),
+      punch: new Image(),
+      kick: new Image(),
+      dead1: new Image(),
+      dead2: new Image(),
+      dead3: new Image()
+    };
+    enemySprites.idle.src = 'SPRITE DE ENEMIGO/X-36 PARADO.png';
+    enemySprites.walk1.src = 'SPRITE DE ENEMIGO/X-36 CAMINANDO 1.png';
+    enemySprites.walk2.src = 'SPRITE DE ENEMIGO/X-36 CAMINANDO 2.png';
+    enemySprites.walk3.src = 'SPRITE DE ENEMIGO/X-36 CAMINANDO 3 .png';
+    enemySprites.punch.src = 'SPRITE DE ENEMIGO/X-32 GOLPE.png';
+    enemySprites.kick.src = 'SPRITE DE ENEMIGO/X-36 PATADA.png';
+    enemySprites.dead1.src = 'SPRITE DE ENEMIGO/X-36 1 MUERTO.png';
+    enemySprites.dead2.src = 'SPRITE DE ENEMIGO/X-36 2 MUERTO.png';
+    enemySprites.dead3.src = 'SPRITE DE ENEMIGO/X-36 3 MUERTO.png';
+
+    const GROUND_Y = 245; // Ground contact height on 800x400 canvas
+    let gameLoopId = null;
+    let unlockedDiscs = 0;
+    let currentEnemyNumber = 1; // 1 to 4 sequential enemies
+    let totalEnemies = 4;
+    let particles = [];
+    let floatingTexts = [];
+
+    // Keyboard state with robust anti-stick tracking
+    const keys = {};
+
+    function setKey(key, code, isPressed) {
+      if (key) {
+        keys[key] = isPressed;
+        keys[key.toLowerCase()] = isPressed;
+        keys[key.toUpperCase()] = isPressed;
+      }
+      if (code) {
+        keys[code] = isPressed;
+      }
+    }
+
+    function resetAllKeys() {
+      for (const k in keys) {
+        keys[k] = false;
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      // Avoid scrolling on space/arrows
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Space'].includes(e.key) || e.code === 'Space') {
+        e.preventDefault();
+      }
+      setKey(e.key, e.code, true);
+
+      if (!modalGame.classList.contains('hidden')) {
+        if (e.key === 'z' || e.key === 'Z') triggerPlayerAttack('punch');
+        if (e.key === 'x' || e.key === 'X') triggerPlayerAttack('kick');
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ' || e.code === 'Space') {
+          triggerPlayerJump();
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      setKey(e.key, e.code, false);
+    });
+
+    // Prevent player from walking indefinitely if window loses focus
+    window.addEventListener('blur', resetAllKeys);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) resetAllKeys();
+    });
+
+    // Player Object (5 Hearts / Vidas)
+    const player = {
+      x: 70,
+      y: GROUND_Y,
+      width: 65,
+      height: 95,
+      speed: 4.5,
+      hp: 5,
+      maxHp: 5,
+      direction: 'right',
+      state: 'idle', // 'idle', 'walk', 'punch', 'kick', 'jump', 'dead'
+      isJumping: false,
+      vy: 0,
+      jumpPower: -12.5,
+      gravity: 0.65,
+      animFrame: 0,
+      animTimer: 0,
+      attackCooldown: 0,
+      invulnerableTimer: 0
+    };
+
+    function triggerPlayerJump() {
+      if (player.state === 'dead' || player.isJumping) return;
+      player.isJumping = true;
+      player.vy = player.jumpPower;
+      playSoundEffect('jump');
+      spawnJumpDust(player.x + player.width / 2, player.y + player.height);
+    }
+
+    function spawnJumpDust(x, y) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 4.5,
+          vy: -Math.random() * 2.2,
+          life: 14,
+          color: '#aaaaaa'
+        });
+      }
+    }
+
+    // Enemy Class (Sequential Enemies 1 to 4)
+    class Enemy {
+      constructor(level) {
+        this.level = level;
+        this.maxHp = 3;
+        this.hp = 3;
+        this.x = 730;
+        this.y = GROUND_Y + 12; // Adjusted for enemy sprite proportions
+        this.width = 62;
+        this.height = 84;
+        this.speed = 1.2 + (level - 1) * 0.35; // Enemies get slightly faster
+        this.direction = 'left';
+        this.state = 'walk'; // 'idle', 'walk', 'punch', 'kick', 'dead'
+        this.isDead = false;
+        this.animTimer = 0;
+        this.animFrame = 0;
+        this.attackCooldown = 0;
+        this.deathTimer = 0;
+      }
+
+      update() {
+        if (this.isDead) {
+          this.deathTimer++;
+          return;
+        }
+
+        if (this.attackCooldown > 0) this.attackCooldown--;
+
+        // Distance to player
+        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
+        this.direction = dx < 0 ? 'left' : 'right';
+        const dist = Math.abs(dx);
+
+        // Attack range
+        if (dist <= 65) {
+          if (this.attackCooldown <= 0 && player.state !== 'dead') {
+            this.state = Math.random() > 0.5 ? 'punch' : 'kick';
+            this.attackCooldown = 55 + Math.floor(Math.random() * 25);
+            
+            // Deal damage to player if on the ground / not jumping over
+            setTimeout(() => {
+              if (this.isDead || player.state === 'dead') return;
+              const inRange = Math.abs((player.x + player.width / 2) - (this.x + this.width / 2)) <= 75;
+              if (inRange) {
+                // If player is airborne (jumping over the opponent), evade the attack!
+                const isEvadingInAir = player.isJumping || (player.y < GROUND_Y - 25);
+                if (isEvadingInAir) {
+                  spawnFloatingText('¡EVADIDO! 💨', player.x + 10, player.y - 12, '#00f0ff');
+                  playSoundEffect('click');
+                } else {
+                  damagePlayer(0.5);
+                }
+              }
+            }, 180);
+
+            setTimeout(() => {
+              if (!this.isDead) this.state = 'idle';
+            }, 300);
+          }
+        } else {
+          // Approach player
+          this.state = 'walk';
+          this.x += (dx < 0 ? -1 : 1) * this.speed;
+        }
+
+        // Animation frame cycling
+        this.animTimer++;
+        if (this.animTimer % 8 === 0) {
+          this.animFrame = (this.animFrame + 1) % 3;
+        }
+      }
+
+      draw() {
+        ctx.save();
+
+        let spriteToDraw = enemySprites.idle;
+
+        if (this.isDead) {
+          if (this.deathTimer < 15) spriteToDraw = enemySprites.dead1;
+          else if (this.deathTimer < 30) spriteToDraw = enemySprites.dead2;
+          else spriteToDraw = enemySprites.dead3;
+        } else if (this.state === 'punch') {
+          spriteToDraw = enemySprites.punch;
+        } else if (this.state === 'kick') {
+          spriteToDraw = enemySprites.kick;
+        } else if (this.state === 'walk') {
+          const walkArr = [enemySprites.walk1, enemySprites.walk2, enemySprites.walk3];
+          spriteToDraw = walkArr[this.animFrame] || enemySprites.idle;
+        }
+
+        // Enemy sprite natively faces RIGHT.
+        // When walking LEFT (towards NAYZE), flip horizontally 180° (scale -1, 1) to face forward!
+        const drawX = this.x;
+        const drawY = this.y;
+
+        if (this.direction === 'left') {
+          ctx.translate(drawX + this.width, drawY);
+          ctx.scale(-1, 1);
+          this.renderSprite(spriteToDraw, 0, 0, this.width, this.height);
+        } else {
+          // Walking right: native orientation
+          ctx.translate(drawX, drawY);
+          this.renderSprite(spriteToDraw, 0, 0, this.width, this.height);
+        }
+
+        ctx.restore();
+
+        // Draw Health Bar above Enemy
+        if (!this.isDead) {
+          const barWidth = 45;
+          const barHeight = 6;
+          const barX = this.x + (this.width - barWidth) / 2;
+          const barY = this.y - 12;
+
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+          ctx.fillStyle = '#ff0033';
+          const fillWidth = Math.max(0, (this.hp / this.maxHp) * barWidth);
+          ctx.fillRect(barX, barY, fillWidth, barHeight);
+
+          // Enemy level badge
+          ctx.fillStyle = '#fff';
+          ctx.font = '8px "Press Start 2P"';
+          ctx.fillText(`X-36 [${this.level}]`, barX - 6, barY - 4);
+        }
+      }
+
+      renderSprite(img, x, y, w, h) {
+        if (img && img.complete && img.naturalWidth !== 0) {
+          ctx.drawImage(img, x, y, w, h);
+        } else {
+          // Fallback rect if sprite is loading
+          ctx.fillStyle = '#ff2255';
+          ctx.fillRect(x, y, w, h);
+        }
+      }
+    }
+
+    let activeEnemy = null;
+
+    // Toast Notification Banner
+    function showToast(text, duration = 2800) {
+      const toast = document.getElementById('game-toast');
+      toast.innerText = text;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, duration);
+    }
+
+    // Trigger Player Attack (Z = Punch, X = Kick)
+    function triggerPlayerAttack(type) {
+      if (player.state === 'dead' || player.attackCooldown > 0) return;
+
+      player.state = type;
+      player.attackCooldown = 18; // frames
+      playSoundEffect(type);
+
+      // Attack Hitbox check
+      if (activeEnemy && !activeEnemy.isDead) {
+        const playerCenterX = player.x + player.width / 2;
+        const enemyCenterX = activeEnemy.x + activeEnemy.width / 2;
+        const dist = Math.abs(playerCenterX - enemyCenterX);
+
+        const isFacingEnemy = (player.direction === 'right' && enemyCenterX > playerCenterX) ||
+                              (player.direction === 'left' && enemyCenterX < playerCenterX);
+
+        if (dist <= 75 && isFacingEnemy) {
+          // Hit connected!
+          activeEnemy.hp -= 1;
+          playSoundEffect('enemy_hit');
+          spawnHitSparks(activeEnemy.x + activeEnemy.width / 2, activeEnemy.y + 35);
+          spawnFloatingText('-1 HP', activeEnemy.x + 20, activeEnemy.y - 15, '#ffe600');
+
+          // Knockback enemy slightly
+          const knockDir = player.direction === 'right' ? 1 : -1;
+          activeEnemy.x = Math.min(canvas.width - activeEnemy.width, Math.max(0, activeEnemy.x + knockDir * 20));
+
+          // Update HUD enemy HP
+          updateEnemyHud();
+
+          if (activeEnemy.hp <= 0) {
+            // Defeated!
+            activeEnemy.isDead = true;
+            playSoundEffect('enemy_defeated');
+            spawnFloatingText('K.O.!', activeEnemy.x + 10, activeEnemy.y, '#ff0055');
+            onEnemyDefeated();
+          }
+        }
+      }
+
+      setTimeout(() => {
+        if (player.state !== 'dead') {
+          player.state = 'idle';
+        }
+      }, 200);
+    }
+
+    // Damage Player (0.5 HP = Half Heart per hit)
+    function damagePlayer(amount = 0.5) {
+      if (player.invulnerableTimer > 0 || player.state === 'dead') return;
+
+      player.hp = Math.max(0, player.hp - amount);
+      player.invulnerableTimer = 40;
+      playSoundEffect('player_hurt');
+      spawnHitSparks(player.x + player.width / 2, player.y + 35, '#ff0033');
+      spawnFloatingText('-½ ❤️', player.x + 15, player.y - 15, '#ff3366');
+      updatePlayerHearts();
+
+      // Mobile haptic vibration
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+
+      if (player.hp <= 0) {
+        player.state = 'dead';
+        showToast('💀 ¡HAS SIDO DERROTADO! REINTENTANDO...', 3000);
+        setTimeout(() => {
+          initGame();
+        }, 2500);
+      }
+    }
+
+    // On Enemy Defeated
+    function onEnemyDefeated() {
+      unlockedDiscs = Math.max(unlockedDiscs, currentEnemyNumber);
+      saveUnlockedDiscs(unlockedDiscs);
+      syncAllDiscsUI(unlockedDiscs);
+      playSoundEffect('disc_unlock');
+
+      if (currentEnemyNumber < totalEnemies) {
+        showToast(`🎉 ¡ENEMIGO ${currentEnemyNumber} VENCIDO! DISCO #${unlockedDiscs} GUARDADO`, 2500);
+        currentEnemyNumber++;
+        setTimeout(() => {
+          activeEnemy = new Enemy(currentEnemyNumber);
+          updateEnemyHud();
+        }, 1200);
+      } else {
+        // VICTORY! All 4 Enemies Defeated
+        playSoundEffect('disc_unlock');
+        showToast('👑 ¡VICTORIA TOTAL! DESBLOQUEASTE TODOS LOS TRACKS', 4000);
+        const ipodStatus = document.getElementById('ipod-status');
+        if (ipodStatus) ipodStatus.innerText = '🌟 ¡TODOS LOS TRACKS DISPONIBLES! TOCA PARA ESCUCHAR';
+        activeEnemy = null;
+        updateEnemyHud();
+      }
+    }
+
+    // Unlock Disc & iPod Button
+    function unlockDisc(trackNum) {
+      playSoundEffect('disc_unlock');
+      syncAllDiscsUI();
+    }
+
+    // 8-Bit Pixel Heart SVG Renderer (Full, Half, Empty)
+    function getHeartSvg(state) {
+      if (state === 'full') {
+        return `<svg class="pixel-heart" width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M2 3H6V5H7V6H9V5H10V3H14V6H13V8H11V10H9V12H7V10H5V8H3V6H2V3Z" fill="#ff0055"/>
+          <rect x="3" y="4" width="1" height="1" fill="#ffffff"/>
+        </svg>`;
+      } else if (state === 'half') {
+        return `<svg class="pixel-heart" width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M2 3H6V5H7V6H8V12H7V10H5V8H3V6H2V3Z" fill="#ff0055"/>
+          <rect x="3" y="4" width="1" height="1" fill="#ffffff"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M8 6H9V5H10V3H14V6H13V8H11V10H9V12H8V6Z" fill="#222638"/>
+        </svg>`;
+      } else {
+        return `<svg class="pixel-heart" width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M2 3H6V5H7V6H9V5H10V3H14V6H13V8H11V10H9V12H7V10H5V8H3V6H2V3Z" fill="#1c1f2e" stroke="#383f58" stroke-width="0.5"/>
+        </svg>`;
+      }
+    }
+
+    // Update Player Hearts in HUD (5 Hearts with Half-Heart Support)
+    function updatePlayerHearts() {
+      const container = document.getElementById('player-hearts-container');
+      if (!container) return;
+      container.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const heartVal = player.hp - i;
+        if (heartVal >= 1.0) {
+          container.innerHTML += getHeartSvg('full');
+        } else if (heartVal >= 0.5) {
+          container.innerHTML += getHeartSvg('half');
+        } else {
+          container.innerHTML += getHeartSvg('empty');
+        }
+      }
+    }
+
+    // Update Enemy HUD Bar
+    function updateEnemyHud() {
+      const label = document.getElementById('hud-enemy-label');
+      const fill = document.getElementById('enemy-hp-fill');
+      if (activeEnemy && !activeEnemy.isDead) {
+        label.innerText = `ENEMIGO [X-36] #${currentEnemyNumber}/${totalEnemies}`;
+        const pct = Math.max(0, (activeEnemy.hp / activeEnemy.maxHp) * 100);
+        fill.style.width = pct + '%';
+      } else if (!activeEnemy && unlockedDiscs >= 4) {
+        label.innerText = `¡COMPLETADO!`;
+        fill.style.width = '0%';
+      } else {
+        fill.style.width = '0%';
+      }
+    }
+
+    // Floating text feedback (damage numbers, K.O.)
+    function spawnFloatingText(text, x, y, color) {
+      floatingTexts.push({ text, x, y, color, life: 35 });
+    }
+
+    // Spark Particles on Hit
+    function spawnHitSparks(x, y, color = '#ffe600') {
+      for (let i = 0; i < 10; i++) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6,
+          life: 18,
+          color
+        });
+      }
+    }
+
+    // Initialize Minigame
+    function initGame() {
+      resetAllKeys();
+      player.x = 70;
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.isJumping = false;
+      player.hp = 5;
+      player.state = 'idle';
+      player.direction = 'right';
+      player.invulnerableTimer = 0;
+      player.attackCooldown = 0;
+      
+      // Preserve unlocked discs so progress is NEVER lost on death!
+      const savedDiscs = getSavedUnlockedDiscs();
+      unlockedDiscs = Math.max(unlockedDiscs, savedDiscs);
+      currentEnemyNumber = Math.min(totalEnemies, (unlockedDiscs < 4 ? unlockedDiscs + 1 : 1));
+
+      particles = [];
+      floatingTexts = [];
+      activeEnemy = new Enemy(currentEnemyNumber);
+
+      updatePlayerHearts();
+      updateEnemyHud();
+      syncAllDiscsUI(unlockedDiscs);
+
+      if (gameLoopId) cancelAnimationFrame(gameLoopId);
+      lastFrameTime = performance.now();
+      gameLoop();
+    }
+
+    // Main Game Loop (60 FPS)
+    let lastFrameTime = performance.now();
+
+    function gameLoop() {
+      // 1. Process Player Movement (Horizontal + Jump)
+      if (player.state !== 'dead') {
+        let moving = false;
+        if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) {
+          player.x = Math.min(canvas.width - player.width - 20, player.x + player.speed);
+          player.direction = 'right';
+          moving = true;
+        }
+        if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) {
+          player.x = Math.max(20, player.x - player.speed);
+          player.direction = 'left';
+          moving = true;
+        }
+
+        // Apply Jump Physics
+        if (player.isJumping) {
+          player.vy += player.gravity;
+          player.y += player.vy;
+          if (player.y >= GROUND_Y) {
+            player.y = GROUND_Y;
+            player.vy = 0;
+            player.isJumping = false;
+            spawnJumpDust(player.x + player.width / 2, player.y + player.height);
+          }
+        }
+
+        if (player.state !== 'punch' && player.state !== 'kick') {
+          if (player.isJumping) {
+            player.state = 'jump';
+          } else {
+            player.state = moving ? 'walk' : 'idle';
+          }
+        }
+
+        // Walk frame timer
+        player.animTimer++;
+        if (player.animTimer % 7 === 0) {
+          player.animFrame = (player.animFrame + 1) % 3;
+        }
+      }
+
+      if (player.attackCooldown > 0) player.attackCooldown--;
+      if (player.invulnerableTimer > 0) player.invulnerableTimer--;
+
+      // 2. Update Active Enemy
+      if (activeEnemy) {
+        activeEnemy.update();
+      }
+
+      // 3. Clear Canvas & Draw Background
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (bgImg.complete && bgImg.naturalWidth !== 0) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        // Fallback gradient arena
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#101222');
+        grad.addColorStop(1, '#05060a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // 4. Draw Active Enemy
+      if (activeEnemy) {
+        activeEnemy.draw();
+      }
+
+      // 5. Draw Player (NAYZE)
+      ctx.save();
+      // Invulnerability flash
+      if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer / 4) % 2 === 0) {
+        ctx.globalAlpha = 0.4;
+      }
+
+      let pSprite = playerSprites.idle;
+      if (player.state === 'punch') {
+        pSprite = playerSprites.punch;
+      } else if (player.state === 'kick') {
+        pSprite = playerSprites.kick;
+      } else if (player.isJumping) {
+        pSprite = playerSprites.jump;
+      } else if (player.state === 'walk') {
+        const walkCycle = [playerSprites.walk1, playerSprites.walk2, playerSprites.walk3];
+        pSprite = walkCycle[player.animFrame] || playerSprites.idle;
+      } else if (player.state === 'dead') {
+        pSprite = playerSprites.dead;
+      }
+
+      if (player.direction === 'left') {
+        ctx.translate(player.x + player.width, player.y);
+        ctx.scale(-1, 1);
+        renderSpriteSafely(pSprite, 0, 0, player.width, player.height, '#00f0ff');
+      } else {
+        ctx.translate(player.x, player.y);
+        renderSpriteSafely(pSprite, 0, 0, player.width, player.height, '#00f0ff');
+      }
+      ctx.restore();
+
+      // 6. Draw Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // 7. Draw Floating Damage / K.O. Texts
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 0.8;
+        ft.life--;
+        ctx.fillStyle = ft.color;
+        ctx.font = '10px "Press Start 2P"';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+      }
+
+      gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function renderSpriteSafely(img, x, y, w, h, fallbackColor) {
+      if (img && img.complete && img.naturalWidth !== 0) {
+        ctx.drawImage(img, x, y, w, h);
+      } else {
+        ctx.fillStyle = fallbackColor;
+        ctx.fillRect(x, y, w, h);
+      }
+    }
+
+    /* =========================================================
+       6. MOBILE VIRTUAL GAMEPAD TOUCH BINDINGS
+       ========================================================= */
+    function bindTouchButton(elemId, pressCallback, releaseCallback) {
+      const btn = document.getElementById(elemId);
+      if (!btn) return;
+
+      let isDown = false;
+      const release = () => {
+        if (isDown) {
+          isDown = false;
+          if (releaseCallback) releaseCallback();
+        }
+      };
+      const press = () => {
+        isDown = true;
+        getAudioContext();
+        if (pressCallback) pressCallback();
+      };
+
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        press();
+      }, { passive: false });
+
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        release();
+      }, { passive: false });
+
+      btn.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        release();
+      }, { passive: false });
+
+      btn.addEventListener('mousedown', (e) => {
+        press();
+      });
+
+      btn.addEventListener('mouseleave', () => {
+        release();
+      });
+
+      window.addEventListener('mouseup', () => {
+        release();
+      });
+    }
+
+    bindTouchButton('btn-left', () => { keys['ArrowLeft'] = true; }, () => { keys['ArrowLeft'] = false; });
+    bindTouchButton('btn-right', () => { keys['ArrowRight'] = true; }, () => { keys['ArrowRight'] = false; });
+    bindTouchButton('btn-jump', () => { triggerPlayerJump(); });
+    bindTouchButton('btn-punch', () => { triggerPlayerAttack('punch'); });
+    bindTouchButton('btn-kick', () => { triggerPlayerAttack('kick'); });
+
+    // Enable audio on any first user interaction anywhere
+    window.addEventListener('click', () => {
+      getAudioContext();
+    }, { once: true });
+  </script>
+</body>
+</html>
